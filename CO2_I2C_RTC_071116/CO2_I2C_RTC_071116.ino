@@ -1,3 +1,5 @@
+//thing
+
 // CO2 Meter K‐series Example Interface
 // by Andrew Robinson, CO2 Meter <co2meter.com>
 // Talks via I2C to K33‐ELG/BLG Sensors for Host‐Initiated Data Collection // 4.1.2011

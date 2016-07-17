@@ -1,7 +1,7 @@
 #include <Wire.h>
 #include "Co2Meter_K33.h"
-#include <SPI.h>
-#include <SD.h>
+#include <SPI.h> 
+#include <SD.h>   //changed <> to ""
 #include "RTClib.h"
 
 int co2Addr = 0x68;
@@ -38,8 +38,8 @@ void loop() {
 
   // We keep the sample period >25s or so, else the sensor will start ignoring sample requests. wakeSensor();
   digitalWrite(motorPin, HIGH); //turns pump on
-  k33.initPoll();
-  //delay(60000); //wait one minute
+  k33.initPoll(); //this is different? 
+  delay(60000); //wait one minute. rlv uncommented
   delay(16000); //wait 16 seconds
   wakeSensor();
   double tempValue = k33.readTemp();

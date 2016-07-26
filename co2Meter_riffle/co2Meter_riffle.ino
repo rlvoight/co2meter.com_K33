@@ -21,68 +21,68 @@ const int hdr_pwr_enable = 8; //enable pin for header power
 const int chipSelect = 7; //SPI Chip Select for SD Card
 const int airPumpPin = 3;
 
-long measurement_interval = 60*5; //60 seconds/minute * # of minutes
-long airPump_flush_time = 1000*10; //1000 milliseconds/second * # of seconds
+long measurement_interval = 60 * 1; //60 seconds/minute * # of minutes
+long airPump_flush_time = 1000 * 1; //1000 milliseconds/second * # of seconds
 
 void setup() {
-    if (DEBUG) Serial.begin(9600);
-    Wire.begin();
-    rtc.begin();
-    pinMode(rtc_int, INPUT_PULLUP); //rtc needs the interrupt line to be pulled up
-    if (DEBUG) rtc.adjust(DateTime((__DATE__), (__TIME__))); //Adjust automatically
-    pinMode(led, OUTPUT);
-    pinMode(chipSelect, OUTPUT);
-    pinMode(bat_v_enable, OUTPUT);
-    digitalWrite(bat_v_enable, HIGH); //Turn off Battery Reading
-    pinMode(sd_pwr_enable, OUTPUT);
-    pinMode(airPumpPin, OUTPUT); //setting up motor
-    if(DEBUG) Serial.println("----Setup Done, Starting Measurement Cycle---");
+  if (DEBUG) Serial.begin(9600);
+  Wire.begin();
+  rtc.begin();
+  pinMode(rtc_int, INPUT_PULLUP); //rtc needs the interrupt line to be pulled up
+  if (DEBUG) rtc.adjust(DateTime((__DATE__), (__TIME__))); //Adjust automatically
+  pinMode(led, OUTPUT);
+  pinMode(chipSelect, OUTPUT);
+  pinMode(bat_v_enable, OUTPUT);
+  digitalWrite(bat_v_enable, HIGH); //Turn off Battery Reading
+  pinMode(sd_pwr_enable, OUTPUT);
+  pinMode(airPumpPin, OUTPUT); //setting up motor
+  if (DEBUG) Serial.println("----Setup Done, Starting Measurement Cycle---");
 }
 
 void loop() {
-    digitalWrite(airPumpPin, HIGH); //turns pump on.
-    delay(airPump_flush_time); //milliseconds
+  digitalWrite(airPumpPin, HIGH); //turns pump on.
+  delay(airPump_flush_time); //milliseconds
 
-    DateTime now = rtc.now(); //get the current time
-    DateTime nextAlarm = DateTime(now.unixtime() + measurement_interval);
-    if (DEBUG) {
-        Serial.print("Now: ");
-        Serial.print(now.unixtime());
-        Serial.print(" Alarm Set for: ");
-        Serial.println(nextAlarm.unixtime());
-        Serial.flush();
-    }
-    k33.initPoll();
-    delay(16000);
-    double tempValue = k33.readTemp();
-    delay(20);
-    double rhValue = k33.readRh();
-    delay(20);
-    double co2Value = k33.readCo2();
-    long timeStamp = now.unixtime(); //parses that DateTime Object into a UTC Timestamp
-    if(DEBUG) {
-        Serial.print("Time: ");
-        Serial.print(timeStamp);
-        Serial.print(" CO2: ");
-        Serial.print(co2Value);
-        Serial.print("ppm Temp: ");
-        Serial.print(tempValue);
-        Serial.print("C Rh: ");
-        Serial.print(rhValue);
-        Serial.println("v");
-        Serial.flush();
-    }
-    writeToSd(now.unixtime(), tempValue, rhValue, co2Value);
-    if (DEBUG) {
-        Serial.print("SD Card Written. Sleeping for ");
-        Serial.print(measurement_interval);
-        Serial.print(" seconds.");
-        Serial.println();
-        Serial.println("---------------------------------");
-        Serial.flush();
-    }
-    digitalWrite(airPumpPin, LOW); //turning off motor
-    enterSleep(nextAlarm); //Sleep until saved time
+  DateTime now = rtc.now(); //get the current time
+  DateTime nextAlarm = DateTime(now.unixtime() + measurement_interval);
+  if (DEBUG) {
+    Serial.print("Now: ");
+    Serial.print(now.unixtime());
+    Serial.print(" Alarm Set for: ");
+    Serial.println(nextAlarm.unixtime());
+    Serial.flush();
+  }
+  k33.initPoll();
+  delay(16000);
+  double tempValue = k33.readTemp();
+  delay(20);
+  double rhValue = k33.readRh();
+  delay(20);
+  double co2Value = k33.readCo2();
+  long timeStamp = now.unixtime(); //parses that DateTime Object into a UTC Timestamp
+  if (DEBUG) {
+    Serial.print("Time: ");
+    Serial.print(timeStamp);
+    Serial.print(" CO2: ");
+    Serial.print(co2Value);
+    Serial.print("ppm Temp: ");
+    Serial.print(tempValue);
+    Serial.print("C Rh: ");
+    Serial.print(rhValue);
+    Serial.println("v");
+    Serial.flush();
+  }
+  writeToSd(now.unixtime(), tempValue, rhValue, co2Value);
+  if (DEBUG) {
+    Serial.print("SD Card Written. Sleeping for ");
+    Serial.print(measurement_interval);
+    Serial.print(" seconds.");
+    Serial.println();
+    Serial.println("---------------------------------");
+    Serial.flush();
+  }
+  digitalWrite(airPumpPin, LOW); //turning off motor
+  enterSleep(nextAlarm); //Sleep until saved time
 }
 
 
@@ -101,8 +101,8 @@ void rtc_interrupt() {
 ///////////////////////////////////////////////////
 void enterSleep(DateTime& dt) { //argument is Wake Time as a DateTime object
   delay(50); //Wait for file writing to finish. 10ms works somethings, 20 is more stable
-  digitalWrite(sd_pwr_enable, HIGH); //Turn off power to SD Card
-  delay(100); //wait for SD Card to power down
+//  digitalWrite(sd_pwr_enable, HIGH); //This breaks some cards for some reason(???)
+//  delay(100); //wait for SD Card to power down
   rtc.clearAlarm(); //resets the alarm interrupt status on the rtc
   enableInterrupt(rtc_int, rtc_interrupt, FALLING); //enables the interrupt on Pin5
   rtc.enableAlarm(dt); //Sets the alarm on the rtc to the specified time (using the DateTime Object passed in)
@@ -146,12 +146,14 @@ void writeToSd(long t, float temp, float rh, float co2) {
   digitalWrite(led, HIGH); //LED ON, write cycle start
   /**** POWER ON SD CARD ****/
   digitalWrite(sd_pwr_enable, LOW); //Turn power to SD Card On
-  delay(100); //wait for power to stabilize (!!) 10ms works sometimes
+  delay(150); //wait for power to stabilize (!!) 10ms works sometimes
   /**** INIT SD CARD ****/
   if (DEBUG) Serial.print("SD Card Initializing...");
-  if (!sd.begin(chipSelect)) {  //init. card
+  while (!sd.begin(chipSelect)) {  //init. card
     if (DEBUG) Serial.println("Failed!");
-    while (1); //if card fails to init. the led will stay lit.
+    //    while (1); //if card fails to init. the led will stay lit.
+//    while (!sd.begin(chipSelect))
+      delay(5000);
   }
   if (DEBUG) Serial.println("Success");
   /**** OPEN FILE ****/
@@ -162,14 +164,14 @@ void writeToSd(long t, float temp, float rh, float co2) {
   }
   if (DEBUG) Serial.println("Success");
   /**** WRITE TO FILE ****/
-    myFile.print(t);
-    myFile.print(",");
-    myFile.print(temp);
-    myFile.print(",");
-    myFile.print(rh);
-    myFile.print(",");
-    myFile.print(co2);
-    myFile.println();
-    myFile.close();
-    digitalWrite(led, LOW); //LED will stay on if something broke
+  myFile.print(t);
+  myFile.print(",");
+  myFile.print(temp);
+  myFile.print(",");
+  myFile.print(rh);
+  myFile.print(",");
+  myFile.print(co2);
+  myFile.println();
+  myFile.close();
+  digitalWrite(led, LOW); //LED will stay on if something broke
 }
